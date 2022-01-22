@@ -79,12 +79,14 @@ def main() -> None:
         if not check_redirect(args.check_url):
             logger.info(f'Connection checked OK.')
         else:
+            logger.warning(f'Connection failed. Sleep 30 seconds before login.')
+            time.sleep(30)
             logger.warning(f'Try to log you in.')
             try:
                 post_login(args.username, args.password)
             except Exception as e:
                 logger.error(str(e))
-                break
+                continue
             if check_redirect(args.check_url):
                 logger.info(f'Auto login succeed.')
         time.sleep(interval)
