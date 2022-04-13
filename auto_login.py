@@ -15,16 +15,23 @@ def check_redirect(url: str) -> bool:
     """Access the given URL, and check whether give the redirect meta.
     A redirect meta tells the brower to redirect the page to the login page.
     """
-    # Define patterns.
-    meta_redirect_pattern = "meta http-equiv='refresh'"
-    aruba_pattern = "arubalp"
     # Fire up a HTTP GET.
-    r = requests.get(url)
-    # Check whether contains the pattern.
-    if (meta_redirect_pattern in r.text) and (aruba_pattern in r.text):
+    try:
+        r = requests.get(url, timeout=30)
+    # If connection error, go to login.
+    except ConnectionError:
+        return True
+    except TimeoutError:
         return True
     else:
-        return False
+        # Define redirect patterns.
+        meta_redirect_pattern = "meta http-equiv='refresh'"
+        aruba_pattern = "arubalp"
+        # Check whether contains the pattern.
+        if (meta_redirect_pattern in r.text) and (aruba_pattern in r.text):
+            return True
+        else:
+            return False
 
 
 def post_login(username: str, password: str) -> str:
@@ -86,9 +93,9 @@ def main() -> None:
                 post_login(args.username, args.password)
             except Exception as e:
                 logger.error(str(e))
-                continue
-            if check_redirect(args.check_url):
-                logger.info(f'Auto login succeed.')
+            else:
+                if not check_redirect(args.check_url):
+                    logger.info(f'Auto login succeed.')
         time.sleep(interval)
 
 
