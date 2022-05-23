@@ -14,7 +14,7 @@ def str_to_path(p: Union[str, Path]) -> Path:
         return p
 
 
-def setup_logger(work_dir=None, logfile_name='log.txt', logger_name='logger') -> logging.Logger:
+def setup_logger(work_dir=None, logfile_name=None, logger_name='logger') -> logging.Logger:
     """Sets up logger from target work directory.
 
     The function will sets up a logger with `DEBUG` log level. Two handlers will

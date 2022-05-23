@@ -4,7 +4,6 @@ Auto login to CUHK ResNet when required.
 
 import argparse
 import time
-from datetime import datetime
 
 import requests
 
@@ -48,6 +47,24 @@ def post_login(username: str, password: str) -> str:
     return r.text
 
 
+def check_connection(args, logger):
+    if not check_redirect(args.check_url):
+        logger.info(f'Connection checked OK.')
+    else:
+        logger.warning(f'Connection failed. Sleep 30 seconds before login.')
+        time.sleep(30)
+        logger.warning(f'Try to log you in.')
+        try:
+            post_login(args.username, args.password)
+        except Exception as e:
+            logger.error(str(e))
+        else:
+            if not check_redirect(args.check_url):
+                logger.info(f'Auto login succeed.')
+    return
+    
+
+
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
@@ -63,6 +80,10 @@ def parse_args() -> argparse.Namespace:
                         help='Interval for checking connectivity.')
     parser.add_argument('--log_dir', type=str, default='logs',
                         help='Directory to save logs.')
+    parser.add_argument('--run_once', action='store_true',
+                        help='If this flag is activated, run check and login once.')
+    parser.add_argument('--login_only', action='store_true',
+                        help='POST login immediately without testing connection.')
 
     return parser.parse_args()
 
@@ -72,8 +93,7 @@ def main() -> None:
     # Parse arguments.
     args = parse_args()
     # Get current time for log file namming.
-    current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
-    logger = setup_logger(work_dir=args.log_dir, logfile_name=f'{current_time}.log')
+    logger = setup_logger()
     # Get interval.
     interval = convert_to_seconds(args.check_interval)
     # Welcome information.
@@ -82,20 +102,16 @@ def main() -> None:
                 f'  check interval: {interval} seconds\n'
                 f'  username: {args.username}\n'
                 f'  password: {args.password}')
+    if args.run_once:
+        logger.info(f'Check connection once.')
+        check_connection(args, logger)
+        return 0
+    if args.login_only:
+        logger.info(f'Login immediately.')
+        post_login(args.username, args.password)
+        return 0
     while True:
-        if not check_redirect(args.check_url):
-            logger.info(f'Connection checked OK.')
-        else:
-            logger.warning(f'Connection failed. Sleep 30 seconds before login.')
-            time.sleep(30)
-            logger.warning(f'Try to log you in.')
-            try:
-                post_login(args.username, args.password)
-            except Exception as e:
-                logger.error(str(e))
-            else:
-                if not check_redirect(args.check_url):
-                    logger.info(f'Auto login succeed.')
+        check_connection(args, interval, logger)
         time.sleep(interval)
 
 
